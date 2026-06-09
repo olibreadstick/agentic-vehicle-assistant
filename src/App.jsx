@@ -298,7 +298,7 @@ function stopSpeaking() {
             Send
           </button>
           <button onClick={replayLastAssistantMessage} type="button">
-            🔊 Replay
+            Replay
           </button>
           <button onClick={stopSpeaking}>
             Stop voice
