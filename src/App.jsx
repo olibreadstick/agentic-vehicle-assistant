@@ -78,14 +78,33 @@ function App() {
 
       const assistantReply = extractAssistantReply(data);
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: assistantReply,
-          missing_location_events: data.missing_location_events || [],
-        },
-      ]);
+      const missingEvents =
+      data.missing_location_events ||
+      data.json?.missing_location_events ||
+      [];
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        text: assistantReply,
+        missing_location_events: missingEvents,
+      },
+    ]);
+
+    const speechText =
+      missingEvents.length > 0
+        ? assistantReply +
+          " " +
+          missingEvents
+            .map(
+              (event) =>
+                `${event.title}, for ${event.person}, at ${event.start_time_display}.`
+            )
+            .join(" ")
+        : assistantReply;
+
+    speakText(speechText);
     } catch (error) {
       console.error("Agent connection error:", error);
 
@@ -155,37 +174,53 @@ function App() {
     recognition.start();
   }
 
-  return (
-    <div className="page">
-      <div className="chat-container">
-        <h1>Agentic Vehicle Assistant</h1>
+  function speakText(text) {
+      if (!("speechSynthesis" in window)) {
+        console.warn("Text-to-speech is not supported in this browser.");
+        return;
+      }
 
-        <div className="chat-box">
-          {messages.map((msg, index) => (
-            <div key={index} className={`message ${msg.role}`}>
-              <div>{msg.text}</div>
+      window.speechSynthesis.cancel();
 
-{msg.missing_location_events?.length > 0 && (
-  <div className="missing-events">
-    {msg.missing_location_events.map((event, i) => (
-      <div key={i} className="missing-event">
-        <div>
-          • {event.title} ({event.person} at {event.start_time_display})
-        </div>
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-CA";
+      utterance.rate = 1;
+      utterance.pitch = 1;
 
-        {event.htmlLink && (
-          <a
-            href={event.htmlLink}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Edit event
-          </a>
-        )}
+      window.speechSynthesis.speak(utterance);
+    }
+
+      return (
+        <div className="page">
+          <div className="chat-container">
+            <h1>Agentic Vehicle Assistant</h1>
+
+            <div className="chat-box">
+              {messages.map((msg, index) => (
+                <div key={index} className={`message ${msg.role}`}>
+                  <div>{msg.text}</div>
+
+    {msg.missing_location_events?.length > 0 && (
+      <div className="missing-events">
+        {msg.missing_location_events.map((event, i) => (
+          <div key={i} className="missing-event">
+            <div>
+              • {event.title} ({event.person} at {event.start_time_display})
+            </div>
+
+            {event.htmlLink && (
+              <a
+                href={event.htmlLink}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Edit event
+              </a>
+            )}
+          </div>
+        ))}
       </div>
-    ))}
-  </div>
-)}
+    )}
             </div>
           ))}
 
@@ -211,10 +246,17 @@ function App() {
           <button onClick={sendMessage} disabled={loading}>
             Send
           </button>
+          <button onClick={stopSpeaking}>
+            Stop voice
+          </button>
         </div>
       </div>
     </div>
   );
+}
+
+function stopSpeaking() {
+  window.speechSynthesis.cancel();
 }
 
 export default App;
