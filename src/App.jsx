@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
-import "./App.css";
 import { useEffect, useMemo, useState } from "react";
+import "./App.css";
 
 const WEBHOOK_URL =
   "https://jbyutse.app.n8n.cloud/webhook/dfdb3619-6ae8-4a9d-8975-b8197ce5aede";
@@ -297,8 +296,8 @@ function stopSpeaking() {
           <button onClick={sendMessage} disabled={loading}>
             Send
           </button>
-          <button onClick={replayLastAssistantMessage} type="button">
-            Replay
+          <button onClick={replayLastAssistantMessage}>
+            🔊 Replay
           </button>
           <button onClick={stopSpeaking}>
             Stop voice
