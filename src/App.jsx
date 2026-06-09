@@ -7,24 +7,23 @@ const WEBHOOK_URL =
 function App() {
   const sessionId = useMemo(() => {
     const existing = localStorage.getItem("agenticVehicleSessionId");
-
     if (existing) return existing;
 
     const newSessionId = crypto.randomUUID();
     localStorage.setItem("agenticVehicleSessionId", newSessionId);
-
     return newSessionId;
   }, []);
 
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      text: "Hi! Ask me about your route plan, schedule, priorities, weather, construction impacts, or travel plans for today.",
+      text: "Hi! Ask me about your route plan, schedule, priorities, construction impacts, or travel plans for today.",
     },
   ]);
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
 
   function extractAssistantReply(data) {
     if (typeof data === "string") return data;
@@ -40,14 +39,12 @@ function App() {
     );
   }
 
-  async function sendMessage() {
-    const trimmedInput = input.trim();
+  async function sendMessageText(textToSend) {
+    const trimmedInput = textToSend.trim();
 
     if (!trimmedInput || loading) return;
 
-    const userMessage = trimmedInput;
-
-    setMessages((prev) => [...prev, { role: "user", text: userMessage }]);
+    setMessages((prev) => [...prev, { role: "user", text: trimmedInput }]);
     setInput("");
     setLoading(true);
 
@@ -58,9 +55,10 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: userMessage,
-          chatInput: userMessage,
+          message: trimmedInput,
+          chatInput: trimmedInput,
           sessionId,
+          inputType: "voice_or_text",
         }),
       });
 
@@ -93,6 +91,60 @@ function App() {
     }
   }
 
+  function sendMessage() {
+    sendMessageText(input);
+  }
+
+  function startVoiceInput() {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: "Voice recognition is not supported in this browser. Try using Chrome.",
+        },
+      ]);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = "en-CA";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      setListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+      sendMessageText(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: "Sorry, I could not understand the voice input.",
+        },
+      ]);
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    recognition.start();
+  }
+
   return (
     <div className="page">
       <div className="chat-container">
@@ -106,6 +158,7 @@ function App() {
           ))}
 
           {loading && <div className="message assistant">Thinking...</div>}
+          {listening && <div className="message assistant">Listening...</div>}
         </div>
 
         <div className="input-row">
@@ -118,6 +171,10 @@ function App() {
             }}
             disabled={loading}
           />
+
+          <button onClick={startVoiceInput} disabled={loading || listening}>
+            🎤
+          </button>
 
           <button onClick={sendMessage} disabled={loading}>
             Send
