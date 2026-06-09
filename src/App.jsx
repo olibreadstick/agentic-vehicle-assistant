@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
 import "./App.css";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const WEBHOOK_URL =
   "https://jbyutse.app.n8n.cloud/webhook/dfdb3619-6ae8-4a9d-8975-b8197ce5aede";
+
+const WELCOME_MESSAGE =
+  "Hi! Ask me about your route plan, schedule, priorities, construction impacts, or travel plans for today.";
 
 function App() {
   const sessionId = useMemo(() => {
@@ -18,15 +21,27 @@ function App() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      text: "Hi! Ask me about your route plan, schedule, priorities, construction impacts, or travel plans for today.",
+      text: WELCOME_MESSAGE,
     },
   ]);
 
   useEffect(() => {
-  speakText(
-    "Hi! Ask me about your route plan, schedule, priorities, construction impacts, or travel plans for today."
-  );
-}, []);
+    const timer = setTimeout(() => {
+      speakText(WELCOME_MESSAGE);
+    }, 500);
+
+    const unlockVoice = () => {
+      speakText(WELCOME_MESSAGE);
+      window.removeEventListener("click", unlockVoice);
+    };
+
+    window.addEventListener("click", unlockVoice);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("click", unlockVoice);
+    };
+  }, []);
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -203,21 +218,28 @@ function stopSpeaking() {
     recognition.start();
   }
 
-  function speakText(text) {
-      if (!("speechSynthesis" in window)) {
-        console.warn("Text-to-speech is not supported in this browser.");
-        return;
-      }
+  function replayLastAssistantMessage() {
+  const lastAssistantMessage = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant");
 
-      window.speechSynthesis.cancel();
+  if (!lastAssistantMessage) return;
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-CA";
-      utterance.rate = 1;
-      utterance.pitch = 1;
+  let textToSpeak = lastAssistantMessage.text;
 
-      window.speechSynthesis.speak(utterance);
-    }
+  if (lastAssistantMessage.missing_location_events?.length > 0) {
+    textToSpeak +=
+      " " +
+      lastAssistantMessage.missing_location_events
+        .map(
+          (event) =>
+            `${event.title}, for ${event.person}, at ${event.start_time_display}.`
+        )
+        .join(" ");
+  }
+
+  speakText(textToSpeak);
+}
 
       return (
         <div className="page">
@@ -274,6 +296,9 @@ function stopSpeaking() {
 
           <button onClick={sendMessage} disabled={loading}>
             Send
+          </button>
+          <button onClick={replayLastAssistantMessage} type="button">
+            🔊 Replay
           </button>
           <button onClick={stopSpeaking}>
             Stop voice
