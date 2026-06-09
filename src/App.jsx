@@ -296,10 +296,10 @@ function stopSpeaking() {
           <button onClick={sendMessage} disabled={loading}>
             Send
           </button>
-          <button onClick={replayLastAssistantMessage}>
+          <button onClick={replayLastAssistantMessage} type="button">
             🔊 Replay
           </button>
-          <button onClick={stopSpeaking}>
+          <button onClick={stopSpeaking} type="button">
             Stop voice
           </button>
         </div>
