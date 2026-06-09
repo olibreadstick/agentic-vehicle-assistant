@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import "./App.css";
+import { useEffect } from "react";
 
 const WEBHOOK_URL =
   "https://jbyutse.app.n8n.cloud/webhook/dfdb3619-6ae8-4a9d-8975-b8197ce5aede";
@@ -20,6 +21,12 @@ function App() {
       text: "Hi! Ask me about your route plan, schedule, priorities, construction impacts, or travel plans for today.",
     },
   ]);
+
+  useEffect(() => {
+  speakText(
+    "Hi! Ask me about your route plan, schedule, priorities, construction impacts, or travel plans for today."
+  );
+}, []);
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,6 +51,28 @@ function App() {
     data?.output?.[0]?.content?.[0]?.text ||
     "Sorry, I did not receive a valid response."
   );
+}
+
+function speakText(text) {
+  if (!("speechSynthesis" in window)) {
+    console.warn("Text-to-speech is not supported in this browser.");
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-CA";
+  utterance.rate = 1;
+  utterance.pitch = 1;
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function stopSpeaking() {
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
 }
 
   async function sendMessageText(textToSend) {
@@ -253,10 +282,6 @@ function App() {
       </div>
     </div>
   );
-}
-
-function stopSpeaking() {
-  window.speechSynthesis.cancel();
 }
 
 export default App;
