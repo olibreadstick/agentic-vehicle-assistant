@@ -26,18 +26,25 @@ function App() {
   const [listening, setListening] = useState(false);
 
   function extractAssistantReply(data) {
-    if (typeof data === "string") return data;
+  if (typeof data === "string") return data;
 
-    return (
-      data.reply ||
-      data.output ||
-      data.text ||
-      data.response ||
-      data.message ||
-      data?.output?.[0]?.content?.[0]?.text ||
-      "Sorry, I did not receive a valid response."
-    );
+  if (Array.isArray(data)) {
+    data = data[0];
   }
+
+  return (
+    data.reply ||
+    data.user_message ||
+    data.output ||
+    data.text ||
+    data.response ||
+    data.message ||
+    data?.json?.reply ||
+    data?.json?.user_message ||
+    data?.output?.[0]?.content?.[0]?.text ||
+    "Sorry, I did not receive a valid response."
+  );
+}
 
   async function sendMessageText(textToSend) {
     const trimmedInput = textToSend.trim();
@@ -66,7 +73,9 @@ function App() {
         throw new Error(`Agent request failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const rawData = await response.json();
+      const data = Array.isArray(rawData) ? rawData[0] : rawData;
+
       const assistantReply = extractAssistantReply(data);
 
       setMessages((prev) => [
@@ -74,6 +83,7 @@ function App() {
         {
           role: "assistant",
           text: assistantReply,
+          missing_location_events: data.missing_location_events || [],
         },
       ]);
     } catch (error) {
@@ -153,7 +163,29 @@ function App() {
         <div className="chat-box">
           {messages.map((msg, index) => (
             <div key={index} className={`message ${msg.role}`}>
-              {msg.text}
+              <div>{msg.text}</div>
+
+{msg.missing_location_events?.length > 0 && (
+  <div className="missing-events">
+    {msg.missing_location_events.map((event, i) => (
+      <div key={i} className="missing-event">
+        <div>
+          • {event.title} ({event.person} at {event.start_time_display})
+        </div>
+
+        {event.htmlLink && (
+          <a
+            href={event.htmlLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Edit event
+          </a>
+        )}
+      </div>
+    ))}
+  </div>
+)}
             </div>
           ))}
 
