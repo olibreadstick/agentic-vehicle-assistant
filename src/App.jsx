@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
+import { getSettings} from "./api/settingsClient";
+import SettingsPanel from "./components/SettingsPanel";
 
 const WEBHOOK_URL =
   "https://jbyutse.app.n8n.cloud/webhook/dfdb3619-6ae8-4a9d-8975-b8197ce5aede";
@@ -23,6 +25,33 @@ function App() {
       text: WELCOME_MESSAGE,
     },
   ]);
+
+  const [settings, setSettings] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        setSettingsLoading(true);
+        setSettingsError("");
+
+        const data = await getSettings(sessionId);
+
+        setSettings(data.settings);
+        console.log("Loaded settings:", data.settings);
+      } catch (error) {
+        console.error(error);
+        setSettingsError("Could not load settings.");
+      } finally {
+        setSettingsLoading(false);
+      }
+    }
+
+    loadSettings();
+  }, [sessionId]);
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -244,6 +273,28 @@ function stopSpeaking() {
         <div className="page">
           <div className="chat-container">
             <h1>Agentic Vehicle Assistant</h1>
+
+            <button
+              type="button"
+              className="settings-button"
+              onClick={() => setSettingsOpen((prev) => !prev)}
+            >
+              ⚙️ Settings
+            </button>
+
+            {settingsLoading && <p>Loading settings...</p>}
+            {settingsError && <p>{settingsError}</p>}
+
+            {settingsOpen && (
+              <SettingsPanel
+                settings={settings}
+                setSettings={setSettings}
+                sessionId={sessionId}
+                onClose={() => setSettingsOpen(false)}
+              />
+            )}
+
+
 
             <div className="chat-box">
               {messages.map((msg, index) => (
